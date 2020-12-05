@@ -5,10 +5,9 @@
 # generate a prior
 
 load("pre_training.RData")
-pre_reg <- glm(income ~ .,
+pre_reg <- glm(gt50 ~ .,
            data = pre_training,
            family = binomial(logit))
-X <- model.matrix(pre_reg)
 
 
 

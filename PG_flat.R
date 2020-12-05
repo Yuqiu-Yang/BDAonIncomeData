@@ -1,45 +1,43 @@
 # In this section, we will use the flat
 # prior for betas 
+source("useFun.R")
 library(BayesLogit)
 library(coda)
 library(mvtnorm)
+library(progress)
 
-d <- data.frame(doses=c(-.863,-.296,-.053,.727),
-                rats=c(5,5,5,5),deaths=c(0,1,3,5))
+load("training.RData")
+d <- training
 
-reg <- glm(cbind(deaths, rats-deaths) ~ doses, 
-           family=binomial(logit),data=d)
 n_chains <- 10
 N <- 2000
 post_samples_list <- vector("list", n_chains)
 n_w <- nrow(d)
 n_b <- length(reg$coefficients)
 X <- model.matrix(reg)
-k <- d$deaths - d$rats/2
+k <- d$gt50 - 0.5
+Xk <- crossprod(X, k)
 for(nc in 1 : n_chains)
 {
-  post_samples <- data.frame(matrix(NA, nrow = N,
-                                    ncol = n_w + n_b))
-  colnames(post_samples) <- c(paste("w",1:n_w, sep="_"),
-                              paste("beta", 1: n_b, sep="_"))
-  for(i in 1 : n_w)
-  {
-    post_samples[1, i] <- rpg(1, d$rats[i])
-  }
-  post_samples[1, (n_w + 1) : (n_w + n_b)] <- reg$coefficients
+  post_samples <- matrix(NA, nrow = N,
+                            ncol = n_b)
+
+  post_samples[1, ] <- reg$coefficients
+  pb <- progress_bar$new(format = paste0("Chain",nc,
+                                         "[:bar] :percent eta: :eta"),
+                         total = N-1, 
+                         clear = FALSE, width= 60)
   for(i in 2 : N)
   {
-    Xb <- X %*% unlist(post_samples[i-1, (n_w + 1) : (n_w + n_b)])
-    for(j in 1 : n_w)
-    {
-      post_samples[i, j] <- rpg(1, d$rats[j], Xb[j,1])
-    }
-    Omega <- diag(post_samples[i, 1:n_w])
-    V <- solve(t(X) %*% Omega %*% X)
-    m <- V %*% (t(X) %*% k )
-    post_samples[i, (n_w + 1) : (n_w + n_b)] <- rmvnorm(1, mean = m, sigma = V)
+    pb$tick()
+    Xb <- tcrossprod(post_samples[i-1, ],X)
+    Omega <- rpg(n_w, 1, Xb)
+    V <- crossprod(X, Omega*X)
+    V <- chol2inv(chol(V))
+    m <- crossprod(V, Xk)
+    post_samples[i, ] <- rmvnorm(1, mean = m, sigma = V)
+    Sys.sleep(1 / 100)
   }
-  print(nc)
   post_samples_list[[nc]] <- post_samples
 }
 

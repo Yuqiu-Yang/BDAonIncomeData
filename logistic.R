@@ -1,5 +1,5 @@
 
 load("training.RData")
-reg <- glm(income ~ .,
+reg <- glm(gt50 ~ .,
              data = training,
              family = binomial(logit))

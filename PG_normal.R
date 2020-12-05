@@ -1,45 +1,54 @@
 # In this section, we will use the 
 # result of the pre_logistic 
 # as the prior for betas 
-
-
+source("useFun.R")
 library(BayesLogit)
 library(coda)
 library(mvtnorm)
+library(progress)
 
 load("training.RData")
-# generate initial values 
-
-n_chains <- 10
-N <- 10000
-post_samples_list <- vector("list", n_chains)
-# number of w's is equal to # of obs
-n_w <- nrow(training)
-n_b <- length(reg$coefficients)
-X <- model.matrix(reg)
-
+d <- training
 
 b <- reg$coefficients
 B <- vcov(reg)
+Binv <- solve(B)
+Binv_b <- Binv%*%b
 
-
-for(chain in n_chains)
+n_chains <- 10
+N <- 100
+post_samples_list <- vector("list", n_chains)
+n_w <- nrow(d)
+n_b <- length(reg$coefficients)
+X <- model.matrix(reg)
+k <- d$gt50 - 0.5
+Xk <- crossprod(X, k)
+for(nc in 1 : n_chains)
 {
-  post_samples <- data.frame(matrix(NA, nrow = N,
-                                    ncol = n_w + n_b))
-  # initialize w_i's
-  post_samples[1, 1 : n_w] <- rpg(n_w, 1, 0)
-  # initialize beta's 
-  post_samples[1, (n_w + 1) : (n_w + n_b)] <- 
-    rmvnorm(1, mean = b, sigma = B)
+  post_samples <- matrix(NA, nrow = N,
+                         ncol = n_b)
+  
+  post_samples[1, ] <- reg$coefficients
+  pb <- progress_bar$new(format = paste0("Chain",nc,
+                                         "[:bar] :percent eta: :eta"),
+                         total = N-1, 
+                         clear = FALSE, width= 60)
   for(i in 2 : N)
   {
-    
+    pb$tick()
+    Xb <- tcrossprod(post_samples[i-1, ],X)
+    Omega <- rpg(n_w, 1, Xb)
+    V <- crossprod(X, Omega*X) + Binv
+    V <- chol2inv(chol(V))
+    m <- crossprod(V, Xk + Binv_b)
+    post_samples[i, ] <- rmvnorm(1, mean = m, sigma = V)
+    Sys.sleep(1 / 100)
   }
-  
-  post_samples_list[[chain]] <- post_samples
+  post_samples_list[[nc]] <- post_samples
 }
 
-
-
+gibbs_list <- lapply(post_samples_list, mcmc)
+gibbs_list <- mcmc.list(gibbs_list)
+g_diag <- gelman.diag(gibbs_list)
+gelman.plot(gibbs_list)
 

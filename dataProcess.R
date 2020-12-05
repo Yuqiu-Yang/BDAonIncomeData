@@ -24,6 +24,9 @@ test <- read.table("adult.test", skip = 1,
 ########################################
 training_data <- training_data[complete.cases(training_data),]
 test <- test[complete.cases(test),]
+training_data$gt50 <- as.numeric(grepl(">", training_data$income, fixed = T))
+test$gt50 <- as.numeric(grepl(">", test$income, fixed = T))
+
 str(training_data)
 ########################################
 # We will then discard variables that 
@@ -35,10 +38,10 @@ str(training_data)
 #######################################
 training_data <- subset(training_data, 
                         select = -c(fnlwgt, workclass, relationship, race,
-                                    capital_gain,capital_loss))
+                                    capital_gain,capital_loss, income))
 test <- subset(test, 
                   select = -c(fnlwgt, workclass, relationship, race,
-                              capital_gain, capital_loss))
+                              capital_gain, capital_loss, income))
 ########################################
 # We see that education and education_num
 # encode the exact same info
