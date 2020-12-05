@@ -19,27 +19,66 @@ test <- read.table("adult.test", skip = 1,
                    na.strings = "?", 
                    stringsAsFactors = T,
                    strip.white = T)
+########################################
 # We will only keep records without NAs
+########################################
 training_data <- training_data[complete.cases(training_data),]
 test <- test[complete.cases(test),]
 str(training_data)
-################################
-# We can combine factor levles 
-################################
-# First we see that education and education_num
-# encode the exact same info 
-plot(training_data$education, training_data$education_num)
-temp <- list()
-for(i in levels(training_data$education))
-{
-  temp[[i]] <- unique(training_data$education_num[training_data$education==i])
-}
-sapply(temp, length)
+########################################
+# We will then discard variables that 
+# does not make a whole lot sense,
+# is kinda redundant given other vars,
+# or contains lots of 0's 
+# We will throw away fnlwgt, relationship, 
+# workclass, capital gain, and capital loss
+#######################################
+training_data <- subset(training_data, 
+                        select = -c(fnlwgt, workclass, relationship, race,
+                                    capital_gain,capital_loss))
+test <- subset(test, 
+                  select = -c(fnlwgt, workclass, relationship, race,
+                              capital_gain, capital_loss))
+########################################
+# We see that education and education_num
+# encode the exact same info
+# plot(training_data$education, training_data$education_num)
+# temp <- list()
+# for(i in levels(training_data$education))
+# {
+#   temp[[i]] <- unique(training_data$education_num[training_data$education==i])
+# }
+# sapply(temp, length)
+#
 # This means that we only need one of them 
 # we will keep the education
+########################################
 training_data <- subset(training_data, select = -c(education_num))
 test <- subset(test, select = -c(education_num))
+########################################
+########################################
+########################################
+################################
+# We can combine factor levels 
+################################
+
+################################
+# Out of 30000 records, around 
+# 27000 has the native country: the US
+# we will recode all non-US to non-US
+################################
+temp <- levels(training_data$native_country)
+temp <- temp[which(temp!="United-States")]
+temp <- paste(temp, collapse = ",")
+temp <- gsub(",", "','",temp)
+temp <- paste0("c('", temp, "')='non-US'")
+training_data$native_country <- recode(training_data$native_country,
+                                       temp)
+test$native_country <- recode(test$native_country,
+                              temp)
+################################
 ## We will then combine anything up to 12th to pre-high
+################################
 training_data$education <- recode(training_data$education,
                                   'c("Preschool", "1st-4th", "5th-6th",
           "7th-8th", "9th", "10th", "11th",
@@ -48,52 +87,83 @@ test$education <- recode(test$education,
                                   'c("Preschool", "1st-4th", "5th-6th",
           "7th-8th", "9th", "10th", "11th",
           "12th") = "Prehigh"')
+
+################################
 # We also group age
-# Adolescence (13-18 years), 
-# Adult (19-59 years) 
-# Senior Adult (60 years and above)
+################################
 training_data$age <- cut(training_data$age,
-                         breaks = seq(0, 100, by = 10))
+                         breaks = c(10, 20, 30, 40, 50, 60, 100))
 test$age <- cut(test$age,
-                         breaks = seq(0, 100, by = 10))
+                         breaks = c(10, 20, 30, 40, 50, 60, 100))
+
+################################
+# The majority of the data has 
+# hours per week = 40
+# We also group them
+################################
+training_data$hours_per_week <- cut(training_data$hours_per_week,
+                         breaks = c(0, 39, 40, 100),
+                         labels = c("<40", "40", ">40"))
+
+test$hours_per_week <- cut(test$hours_per_week,
+                                    breaks = c(0, 39, 40, 100),
+                           labels = c("<40", "40", ">40"))
+
+################################
+# we still have marital status
+# occupation 
+# education 
+
+
+
+for(i in 1 : ncol(training_data))
+{
+  barplot(table(training_data[,i]),
+          main = colnames(test)[i])
+}
+
+
+# can use stratified sampling 
+# here we will use a simple random sample 
+set.seed(42)
+n <- 3000
+ind <- sample(1:nrow(training_data), n)
+pre_training <- training_data[ind, ]
+training <- training_data[setdiff(1:nrow(training_data),
+                                  ind),]
+
+##
+save(pre_training, file = "pre_training.RData")
+save(training, file = "training.RData")
+save(test, file = "test.RData")
+
+
+
+
+##################
+# OUTDATED METHOD 
+##################
+
 ###########################
 # We can also group countries into regions
 training_data$native_country <- as.character(training_data$native_country)
 training_data <- training_data[which(training_data$native_country!="South"),]
 training_data$native_country <- countrycode(sourcevar = training_data$native_country, 
-            origin = "country.name",
-            destination = "region",
-            custom_match = c("England" = "Europe & Central Asia",
-                             "Hong" = "East Asia & Pacific",
-                             "Scotland" = "Europe & Central Asia",
-                             "Columbia" = "Latin America & Caribbean"))
-training_data$native_country <- as.factor(training_data$native_country)
-
-test$native_country <- as.character(test$native_country)
-test <- test[which(test$native_country!="South"),]
-test$native_country <- countrycode(sourcevar = test$native_country, 
                                             origin = "country.name",
                                             destination = "region",
                                             custom_match = c("England" = "Europe & Central Asia",
                                                              "Hong" = "East Asia & Pacific",
                                                              "Scotland" = "Europe & Central Asia",
                                                              "Columbia" = "Latin America & Caribbean"))
+training_data$native_country <- as.factor(training_data$native_country)
+
+test$native_country <- as.character(test$native_country)
+test <- test[which(test$native_country!="South"),]
+test$native_country <- countrycode(sourcevar = test$native_country, 
+                                   origin = "country.name",
+                                   destination = "region",
+                                   custom_match = c("England" = "Europe & Central Asia",
+                                                    "Hong" = "East Asia & Pacific",
+                                                    "Scotland" = "Europe & Central Asia",
+                                                    "Columbia" = "Latin America & Caribbean"))
 test$native_country <- as.factor(test$native_country)
-#######
-#
-
-
-
-
-# can use stratified sampling 
-# here we will use a simple random sample 
-set.seed(42)
-n <- 2000
-ind <- sample(1:nrow(training_data), n)
-pre_training <- training_data[ind, ]
-training <- training_data[setdiff(1:nrow(training_data),
-                                  ind),]
-
-
-
-

@@ -1,13 +1,14 @@
-library(logistf)
+###########
+# In this section, we will only use 
+# the pre-training dataset
+# The purpose of this is to 
+# generate a prior
 
-reg <- logistf(income ~ age + workclass +
-             fnlwgt + education + 
-             marital_status + occupation + 
-             relationship + race + 
-             sex + capital_gain+
-             capital_loss + 
-             hours_per_week + 
-             native_country,
+load("pre_training.RData")
+pre_reg <- glm(income ~ .,
            data = pre_training,
-           control = logistf.control(maxit = 10000))
+           family = binomial(logit))
+X <- model.matrix(pre_reg)
+
+
 

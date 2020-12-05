@@ -1,9 +1,8 @@
+# In this section, we will use the flat
+# prior for betas 
 library(BayesLogit)
 library(coda)
 library(mvtnorm)
-library(logistf)
-
-
 
 d <- data.frame(doses=c(-.863,-.296,-.053,.727),
                 rats=c(5,5,5,5),deaths=c(0,1,3,5))
