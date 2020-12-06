@@ -86,18 +86,20 @@ training_data$education <- recode(training_data$education,
                                   'c("Preschool", "1st-4th", "5th-6th",
           "7th-8th", "9th", "10th", "11th",
           "12th") = "Prehigh"')
+training_data$education <- recode(training_data$education,
+                                  'c("Assoc-acdm","Assoc-voc") = "Associate"')
+training_data$education <- recode(training_data$education,
+                                  'c("Masters","Doctorate") = "Graduate"')
+
 test$education <- recode(test$education,
                                   'c("Preschool", "1st-4th", "5th-6th",
           "7th-8th", "9th", "10th", "11th",
           "12th") = "Prehigh"')
+test$education <- recode(test$education,
+                          'c("Assoc-acdm","Assoc-voc") = "Associate"')
+test$education <- recode(test$education,
+                          'c("Masters","Doctorate") = "Graduate"')
 
-################################
-# We also group age
-################################
-training_data$age <- cut(training_data$age,
-                         breaks = c(10, 20, 30, 40, 50, 60, 100))
-test$age <- cut(test$age,
-                         breaks = c(10, 20, 30, 40, 50, 60, 100))
 
 ################################
 # The majority of the data has 
@@ -113,12 +115,52 @@ test$hours_per_week <- cut(test$hours_per_week,
                            labels = c("<40", "40", ">40"))
 
 ################################
-# we still have marital status
-# occupation 
-# education 
+# We will group occupation
+###############################
+training_data$occupation <- recode(training_data$occupation,
+                                  'c("Farming-fishing",
+                                  "Machine-op-inspct",
+                                  "Armed-Forces",
+                                  "Transport-moving") = "Production"')
+training_data$occupation <- recode(training_data$occupation,
+                                   'c("Adm-clerical",
+                                  "Craft-repair",
+                                  "Exec-managerial",
+                                  "Handlers-cleaners",
+                                  "Other-service",
+                                  "Priv-house-serv",
+                                  "Prof-specialty",
+                                  "Protective-serv",
+                                   "Sales", "Tech-support") = "Service"')
+test$occupation <- recode(test$occupation,
+                                   'c("Farming-fishing",
+                                  "Machine-op-inspct",
+                                  "Armed-Forces",
+                                  "Transport-moving") = "Production"')
+test$occupation <- recode(test$occupation,
+                                   'c("Adm-clerical",
+                                  "Craft-repair",
+                                  "Exec-managerial",
+                                  "Handlers-cleaners",
+                                  "Other-service",
+                                  "Priv-house-serv",
+                                  "Prof-specialty",
+                                  "Protective-serv",
+                                   "Sales", "Tech-support") = "Service"')
+################################
+# we will group marital status
+################################
+training_data$marital_status <- recode(training_data$marital_status,
+                                       'c("Married-AF-spouse",
+                                       "Married-civ-spouse") = "Married"')
+test$marital_status <- recode(test$marital_status,
+                                       'c("Married-AF-spouse",
+                                       "Married-civ-spouse") = "Married"')
 
 
-
+                                   
+                                   
+                                   
 for(i in 1 : ncol(training_data))
 {
   barplot(table(training_data[,i]),
@@ -143,9 +185,17 @@ save(test, file = "test.RData")
 
 
 
+
 ##################
 # OUTDATED METHOD 
 ##################
+################################
+# We also group age
+################################
+training_data$age <- cut(training_data$age,
+                         breaks = c(10, 20, 30, 40, 50, 60, 100))
+test$age <- cut(test$age,
+                breaks = c(10, 20, 30, 40, 50, 60, 100))
 
 ###########################
 # We can also group countries into regions

@@ -2,6 +2,27 @@ library(BayesLogit)
 library(coda)
 library(mvtnorm)
 library(progress)
+library(caret)
+
+burninSample <- function(post_samples_list, n_burn)
+{
+  return(lapply(post_samples_list,'[',-c(1:n_burn),))
+}
+
+combineChains <- function(post_samples_list)
+{
+  rc <- dim(post_samples_list[[1]])
+  temp <- matrix(NA, ncol = rc[2],
+                 nrow = length(post_samples_list)*rc[1])
+  for(i in 1 : (rc[2]))
+  {
+    temp[,i] <- as.vector(sapply(post_samples_list,'[',,i))
+  }
+  return(temp)
+}
+
+
+
 
 gelmanDiag <- function(post_samples_list, show_plot = T, ...)
 {
@@ -18,7 +39,7 @@ gelmanDiag <- function(post_samples_list, show_plot = T, ...)
 binaryLogisticPolyaGammaGibbs <- function(N, n_w, n_b, 
                             X, kappas, 
                             prior_par = list(), initials = NULL,
-                            include_omega = F)
+                            include_omega = F, nc)
 {
   X_kappa <- crossprod(X, kappas)
   if(length(prior_par) <= 1)
@@ -65,7 +86,7 @@ binaryLogisticPolyaGammaGibbs <- function(N, n_w, n_b,
     }
     V <- crossprod(X, Omega*X) + Binv
     V <- chol2inv(chol(V))
-    m <- crossprod(V, Xk + Binv_b)
+    m <- crossprod(V, X_kappa + Binv_b)
     post_samples_beta[i, ] <- rmvnorm(1, mean = m, sigma = V)
     Sys.sleep(1 / 100)
   }
