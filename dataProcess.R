@@ -263,7 +263,7 @@ varProcess <- function(df, formula, response){
   return(df_temp)
 }
 
-df = rbind(training, test)
+df = rbind(training_data, test)
 df_var <- varProcess(df, gt50 ~ ., "gt50")
-training = df_var[1:27162,]
+training_data = df_var[1:27162,]
 test = df_var[27163:42222,]
