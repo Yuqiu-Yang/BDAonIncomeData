@@ -149,24 +149,71 @@ save(test, file = "test.RData")
 
 ###########################
 # We can also group countries into regions
-training_data$native_country <- as.character(training_data$native_country)
-training_data <- training_data[which(training_data$native_country!="South"),]
-training_data$native_country <- countrycode(sourcevar = training_data$native_country, 
-                                            origin = "country.name",
-                                            destination = "region",
-                                            custom_match = c("England" = "Europe & Central Asia",
-                                                             "Hong" = "East Asia & Pacific",
-                                                             "Scotland" = "Europe & Central Asia",
-                                                             "Columbia" = "Latin America & Caribbean"))
+# training_data$native_country <- as.character(training_data$native_country)
+# training_data <- training_data[which(training_data$native_country!="South"),]
+# training_data$native_country <- countrycode(sourcevar = training_data$native_country, 
+#                                             origin = "country.name",
+#                                             destination = "region",
+#                                             custom_match = c("England" = "Europe & Central Asia",
+#                                                              "Hong" = "East Asia & Pacific",
+#                                                              "Scotland" = "Europe & Central Asia",
+#                                                              "Columbia" = "Latin America & Caribbean"))
 training_data$native_country <- as.factor(training_data$native_country)
 
-test$native_country <- as.character(test$native_country)
-test <- test[which(test$native_country!="South"),]
-test$native_country <- countrycode(sourcevar = test$native_country, 
-                                   origin = "country.name",
-                                   destination = "region",
-                                   custom_match = c("England" = "Europe & Central Asia",
-                                                    "Hong" = "East Asia & Pacific",
-                                                    "Scotland" = "Europe & Central Asia",
-                                                    "Columbia" = "Latin America & Caribbean"))
+# test$native_country <- as.character(test$native_country)
+# test <- test[which(test$native_country!="South"),]
+# test$native_country <- countrycode(sourcevar = test$native_country, 
+#                                    origin = "country.name",
+#                                    destination = "region",
+#                                    custom_match = c("England" = "Europe & Central Asia",
+#                                                     "Hong" = "East Asia & Pacific",
+#                                                     "Scotland" = "Europe & Central Asia",
+#                                                     "Columbia" = "Latin America & Caribbean"))
 test$native_country <- as.factor(test$native_country)
+
+### This file is to build a function that can 
+### 1. create dummy variables
+### 2. remove variables with high correlation and near zero variance
+
+### Input: data matrix for the regression
+### Output: data matrix after removing variables high correlation and near zero variance
+
+# Import library
+library(caret)
+
+varProcess <- function(df, formula, response){
+  response_col = df[,response]
+  
+  # create dummy variables for factor variables
+  
+  df_temp = model.matrix(formula, data = df)
+  
+  
+  # remove variables with near zero variance 
+  NearZeroCols = colnames(df_temp)[nearZeroVar(df_temp)]
+  print("Remove below variables for near zero variance")
+  print(NearZeroCols)
+  df_temp = df_temp[ ,-nearZeroVar(df_temp)]
+  
+  
+  # remove variables with high correlation
+  segCorr <- cor(df_temp)
+  highCorr <- findCorrelation(segCorr, 0.9)
+  HighCorrCols = colnames(df_temp)[highCorr]
+  print("Remove below variables for high correlation")
+  print(HighCorrCols)
+  if (length(HighCorrCols) > 0) {
+    df_temp = df_temp[ ,-highCorr]
+  }
+  
+  
+  df_temp = cbind(df_temp,response_col)
+  colnames(df_temp)[colnames(df_temp) == "response_col"] = "gt50"
+  df_temp = data.frame(df_temp)
+  return(df_temp)
+}
+
+df = rbind(training, test)
+df_var <- varProcess(df, gt50 ~ ., "gt50")
+training = df_var[1:27162,]
+test = df_var[27163:42222,]
