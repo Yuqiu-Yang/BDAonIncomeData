@@ -32,7 +32,10 @@ rm(training)
 reg <- glm(gt50 ~ .,
            data = d,
            family = binomial(logit))
-
+load("test.RData")
+lppd_reg <- logPointwisePredictiveDensity(test[,8], predict(reg, 
+                                                newdata = test[,-8],
+                                                type = "response"))
 
 ####################
 # In both cases, we will run 10 MCMC chains
@@ -55,6 +58,25 @@ for(nc in 1 : n_chains)
     binaryLogisticPolyaGammaGibbs(N, n_w, n_b,
                                    X, kappas, nc = nc)
 }
+# We check if chains have converged 
+g_diag_flat <- gelmanDiag(post_samples_list_flat)
+# According to the Gelman analysis, 
+# it seems that all the parameters 
+# have converged 
+# We then burn the first half of each chain 
+# and combine all the chains 
+burned_post_samples_list_flat <- burninSample(post_samples_list_flat,
+                                              N/2)
+burned_post_samples_list_flat <- combineChains(burned_post_samples_list_flat)
+
+# We will then use posterior predictive p value 
+# based on deviance (log likelihood) to 
+# check the model fitting 
+# Find DIC and predictive accuracy
+X_test <- model.matrix(gt50~. ,data = test)
+flat_list <- PPPDICPredictiveDensity(X, burned_post_samples_list_flat,
+                                d[,8], X_test, test[,8])
+
 
 # 3. We use a normal prior
 post_samples_list_normal <- vector("list", n_chains)
@@ -69,8 +91,15 @@ for(nc in 1 : n_chains)
                                   nc = nc)
 }
 
+############
+g_diag_normal <- gelmanDiag(post_samples_list_normal)
+burned_post_samples_list_normal <- burninSample(post_samples_list_normal,
+                                              N/2)
+burned_post_samples_list_normal <- combineChains(burned_post_samples_list_normal)
 
 
+normal_list <- PPPDICPredictiveDensity(X, burned_post_samples_list_normal,
+                                     d[,8], X_test, test[,8])
 
 
 
