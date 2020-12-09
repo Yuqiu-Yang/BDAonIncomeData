@@ -72,6 +72,9 @@ binaryLogisticY <- function(p)
 
 binaryLogisticLogLikelihood <- function(y, p)
 {
+  eps <- 10 * .Machine$double.eps
+  p[which(p > 1 - eps)] <- 1 - eps
+  p[which(p < eps)] <- eps
   return(y * log(p) + (1 - y) * log(1 - p))
 }
 
@@ -197,6 +200,27 @@ binaryLogisticPolyaGammaGibbs <- function(N, n_w, n_b,
   }else{
     return(post_samples_beta)
   }
+}
+
+
+
+################
+# Functions used to fit logistic regression
+foo <- function(b, X_train, y_train)
+{
+  b <- matrix(b, ncol = ncol(X_train))
+  p <- 1/(1 + exp(-Tcrossprod(X_train, b)))
+  c_entropy <- -1 * sum(y_train * log(p) + (1 - y_train) * log(1 - p))
+  return(c_entropy)
+}
+
+goo <- function(b, X_train, y_train)
+{
+  b <- matrix(b, ncol = ncol(X_train))
+  eXb <- exp(-Tcrossprod(X_train, b))
+  p <- as.numeric(1/(1 + eXb))
+  dc_entropy <- colSums((p - y_train) * X_train)
+  return(dc_entropy)
 }
 
 
